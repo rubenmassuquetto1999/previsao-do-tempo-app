@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previsão do Tempo</title>
+    <link rel="shortcut icon" href="./img/tempo.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-background-overlay"></div>
+
+    <div class="app-container" id="appContainer">
+        <!-- Header & Centered Logo -->
+        <header class="app-header" id="appHeader">
+            <div class="brand">
+                <div class="brand-icon-wrapper">
+                    <img src="./img/tempo.png" alt="Logo Clima" class="brand-logo">
+                </div>
+                <div class="brand-text">
+                    <h1 class="brand-title">Previsão do Tempo</h1>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search & Control Bar -->
+        <div class="search-section" id="searchSection">
+            <form class="search-form" id="searchForm" onsubmit="event.preventDefault(); cliqueiNoBotao();">
+                <div class="search-input-wrapper">
+                    <svg class="search-icon-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input 
+                        type="text" 
+                        class="input-cidade" 
+                        id="inputCidade"
+                        placeholder="Digite o nome de uma cidade..." 
+                        autocomplete="off"
+                        required
+                    />
+                    <button type="button" class="btn-clear" id="btnClear" title="Limpar" onclick="limparBusca()" style="display: none;">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="search-actions">
+                    <button type="button" class="action-btn btn-mic" id="btnMic" onclick="detectaVoz()" title="Pesquisar por voz">
+                        <svg class="mic-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                        <span class="mic-pulse-ring"></span>
+                    </button>
+
+                    <button type="button" class="action-btn btn-geo" id="btnGeo" onclick="buscarPorLocalizacao()" title="Usar minha localização atual">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+                        </svg>
+                    </button>
+
+                    <button type="submit" class="action-btn btn-submit" id="btnBuscar" title="Buscar previsão">
+                        <span class="btn-text">Buscar</span>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Voice Status Feedback -->
+            <div class="voice-status-bar" id="voiceStatus" style="display: none;">
+                <div class="sound-wave">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <span class="voice-text" id="voiceText">Ouvindo sua voz... Fale o nome da cidade</span>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
+            <!-- Loading Skeleton -->
+            <div class="loading-state" id="loadingState" style="display: none;">
+                <div class="spinner"></div>
+                <h3 class="loading-title">Buscando dados meteorológicos...</h3>
+            </div>
+
+            <!-- Error State -->
+            <div class="error-state" id="errorState" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <h3 class="error-title" id="errorMessage">Cidade não encontrada</h3>
+                <p class="error-desc">Verifique a ortografia ou tente pesquisar por outra localidade.</p>
+                <button type="button" class="btn-retry" onclick="focarBusca()">Tentar Novamente</button>
+            </div>
+
+            <!-- Results Dashboard -->
+            <div class="weather-dashboard" id="weatherDashboard" style="display: none;">
+                
+                <!-- 1. Hero Weather Card (Current + Today) -->
+                <section class="card hero-weather-card" id="heroWeatherCard">
+                    <div class="hero-top">
+                        <div class="location-details">
+                            <span class="badge-tag">Tempo Agora</span>
+                            <h2 class="city-name" id="cityName">Curitiba, PR - BR</h2>
+                            <p class="update-time" id="updateTime">Atualizado agora</p>
+                        </div>
+                        <div class="hero-icon-container">
+                            <img src="https://openweathermap.org/img/wn/02d@4x.png" alt="Condição" class="hero-weather-img" id="heroWeatherImg">
+                        </div>
+                    </div>
+
+                    <div class="hero-temp-row">
+                        <div class="main-temperature">
+                            <span class="temp-value" id="currentTemp">22</span>
+                            <span class="temp-unit">°C</span>
+                        </div>
+                        <div class="temp-summary">
+                            <span class="weather-desc-badge" id="weatherDesc">Parcialmente Nublado</span>
+                            <div class="temp-range">
+                                <span class="range-item max">▲ <strong id="todayMax">26°C</strong></span>
+                                <span class="range-item min">▼ <strong id="todayMin">14°C</strong></span>
+                                <span class="range-item feels">Sensação <strong id="feelsLike">21°C</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid -->
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <div class="metric-header">
+                                <span class="metric-icon">💧</span>
+                                <span class="metric-label">Umidade</span>
+                            </div>
+                            <span class="metric-val" id="metricHumidity">68%</span>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-header">
+                                <span class="metric-icon">🌧️</span>
+                                <span class="metric-label">Chuva Hoje</span>
+                            </div>
+                            <span class="metric-val" id="metricRain">30%</span>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-header">
+                                <span class="metric-icon">💨</span>
+                                <span class="metric-label">Vento</span>
+                            </div>
+                            <span class="metric-val" id="metricWind">14 km/h</span>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-header">
+                                <span class="metric-icon">☀️</span>
+                                <span class="metric-label">Índice UV</span>
+                            </div>
+                            <span class="metric-val" id="metricUv">6 (Alto)</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. AI Clothing Stylist Section -->
+                <section class="card ai-stylist-card" id="aiStylistCard">
+                    <div class="card-header-row">
+                        <div class="card-title-group">
+                            <span class="ai-sparkle-icon">✨</span>
+                            <div>
+                                <h3 class="section-title">Recomendação de Roupa</h3>
+                                <p class="section-subtitle">Recomendações sob medida geradas para o clima atual e planejamento do dia</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-refresh-ai" id="btnRefreshAi" onclick="recarregarSugestaoIa()" title="Gerar novas dicas com IA">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                            </svg>
+                            <span>Regerar Dicas</span>
+                        </button>
+                    </div>
+
+                    <!-- Dual Clothing Suggestions (Agora vs Dia Todo) -->
+                    <div class="ai-outfit-grid">
+                        
+                        <!-- Box: Look para Agora -->
+                        <div class="outfit-card outfit-now">
+                            <div class="outfit-badge now-badge">
+                                <span class="outfit-emoji" id="outfitNowEmoji">⚡</span>
+                                <span>Sugestão para AGORA</span>
+                            </div>
+                            
+                            <h4 class="outfit-heading" id="outfitNowSummary">Look ideal para vestir neste instante</h4>
+                            
+                            <div class="outfit-items-list" id="outfitNowItems">
+                                <!-- Dynamic List -->
+                            </div>
+
+                            <div class="outfit-tip-box">
+                                <span class="tip-icon">💡</span>
+                                <p class="tip-text" id="outfitNowTip">Dica rápida para sair no momento.</p>
+                            </div>
+                        </div>
+
+                        <!-- Box: Look para o Dia Todo -->
+                        <div class="outfit-card outfit-day">
+                            <div class="outfit-badge day-badge">
+                                <span class="outfit-emoji">📅</span>
+                                <span>Planejamento para o DIA TODO</span>
+                            </div>
+
+                            <h4 class="outfit-heading" id="outfitDaySummary">Como se vestir para as oscilações do dia</h4>
+
+                            <p class="outfit-variation-text" id="outfitDayVariation">Oscilação térmica entre a manhã, tarde e noite.</p>
+
+                            <div class="outfit-items-list" id="outfitDayItems">
+                                <!-- Dynamic List -->
+                            </div>
+
+                            <div class="outfit-tags-row" id="outfitDayTags">
+                                <!-- Dynamic Tags -->
+                            </div>
+
+                            <div class="outfit-alert-box" id="outfitDayAlertBox">
+                                <span class="alert-icon">🛡️</span>
+                                <p class="alert-text" id="outfitDayAlert">Alerta sobre chuva ou radiação solar.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- 3. Hourly Forecast Section -->
+                <section class="card hourly-forecast-card" id="hourlyForecastCard">
+                    <div class="section-heading-simple">
+                        <span class="section-icon">🕒</span>
+                        <h3 class="section-title-sm">Previsão Para As Proximas Horas</h3>
+                    </div>
+                    <div class="hourly-slider" id="hourlySlider">
+                        <!-- Dynamic Hourly items -->
+                    </div>
+                </section>
+
+                <!-- 4. 5-Day Forecast Section -->
+                <section class="card daily-forecast-card" id="dailyForecastCard">
+                    <div class="section-heading-simple">
+                        <span class="section-icon">📅</span>
+                        <h3 class="section-title-sm">Previsão para os Próximos 5 Dias</h3>
+                    </div>
+
+                    <div class="five-days-grid" id="fiveDaysGrid">
+                        <!-- Dynamic 5 Day Cards -->
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Previsão meteorológica fornecida por Open-Meteo & OpenWeather | IA powered by Google Gemini</p>
+        </footer>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+
+</html>

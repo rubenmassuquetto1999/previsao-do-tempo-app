@@ -1,0 +1,11 @@
+{
+  "name": "Previsão do Tempo",
+  "description": "Aplicativo de previsão do tempo com suporte a tema escuro automático, busca de cidades, comandos de voz, geolocalização, previsão horária e para 5 dias com consultor inteligente de looks.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
