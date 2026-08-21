@@ -4,7 +4,7 @@ Uma aplicação Full-Stack desenvolvida para consultar o clima em tempo real e g
 
 ## 🌐 Demonstração Online
 O projeto está no ar e pronto para uso! 
-🔗 **Acesse aqui:** [https://previsao-do-tempo-app.onrender.com](https://previsao-do-tempo-app.onrender.com)
+🔗 **Acesse aqui:** [https://previsao-do-tempo-app.ai.studio](https://previsao-do-tempo-app.ai.studio)
 
 ---
 
