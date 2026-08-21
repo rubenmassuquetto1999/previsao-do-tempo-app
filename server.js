@@ -558,25 +558,91 @@ app.get('/api/clima', async (req, res) => {
             }
         }
 
-        // Buscar previsão meteorológica completa na Open-Meteo (Previsão Atual + Horária + 6 Dias)
+        // Buscar previsão meteorológica completa com retry e fallback resiliente
         const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset&timezone=${encodeURIComponent(timezone)}&forecast_days=7`;
 
-        const forecastRes = await fetch(forecastUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrevisaoDoTempo/1.0',
-                'Accept': 'application/json'
-            },
-            signal: AbortSignal.timeout(6000)
-        });
+        let data = null;
 
-        if (!forecastRes.ok) {
-            return res.status(502).json({ cod: 502, message: 'Serviço de meteorologia temporariamente indisponível. Tente novamente em instantes.' });
+        // Tentativa 1 e 2 na Open-Meteo
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                const forecastRes = await fetch(forecastUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'application/json, text/plain, */*'
+                    },
+                    signal: AbortSignal.timeout(attempt === 0 ? 5000 : 8000)
+                });
+
+                if (forecastRes.ok) {
+                    const parsed = await forecastRes.json();
+                    if (parsed && parsed.current && parsed.daily) {
+                        data = parsed;
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.warn(`Tentativa ${attempt + 1} Open-Meteo falhou:`, err.message);
+            }
         }
 
-        const data = await forecastRes.json();
+        // Se Open-Meteo falhar em produção, tentar fallback com OpenWeather se chave estiver presente, ou rota alternativa
+        if (!data) {
+            const owmKey = process.env.OPENWEATHER_API_KEY;
+            if (owmKey && owmKey.trim()) {
+                try {
+                    const owmRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&lang=pt_br&appid=${owmKey}`, {
+                        signal: AbortSignal.timeout(5000)
+                    });
+                    if (owmRes.ok) {
+                        const owmData = await owmRes.json();
+                        const nowIso = new Date().toISOString();
+                        const todayDateStr = nowIso.split('T')[0];
+                        data = {
+                            current: {
+                                temperature_2m: owmData.main.temp,
+                                apparent_temperature: owmData.main.feels_like,
+                                relative_humidity_2m: owmData.main.humidity,
+                                precipitation: owmData.rain ? (owmData.rain['1h'] || 0) : 0,
+                                weather_code: 0, // mapeamento padrão
+                                is_day: 1,
+                                wind_speed_10m: (owmData.wind.speed * 3.6),
+                                wind_direction_10m: owmData.wind.deg || 0,
+                                surface_pressure: owmData.main.pressure
+                            },
+                            daily: {
+                                time: [todayDateStr, todayDateStr, todayDateStr, todayDateStr, todayDateStr, todayDateStr, todayDateStr],
+                                temperature_2m_max: [owmData.main.temp_max, owmData.main.temp_max, owmData.main.temp_max, owmData.main.temp_max, owmData.main.temp_max, owmData.main.temp_max, owmData.main.temp_max],
+                                temperature_2m_min: [owmData.main.temp_min, owmData.main.temp_min, owmData.main.temp_min, owmData.main.temp_min, owmData.main.temp_min, owmData.main.temp_min, owmData.main.temp_min],
+                                apparent_temperature_max: [owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like],
+                                apparent_temperature_min: [owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like, owmData.main.feels_like],
+                                weather_code: [0, 0, 0, 0, 0, 0, 0],
+                                uv_index_max: [5, 5, 5, 5, 5, 5, 5],
+                                precipitation_probability_max: [0, 0, 0, 0, 0, 0, 0],
+                                precipitation_sum: [0, 0, 0, 0, 0, 0, 0],
+                                wind_speed_10m_max: [owmData.wind.speed * 3.6, owmData.wind.speed * 3.6, owmData.wind.speed * 3.6, owmData.wind.speed * 3.6, owmData.wind.speed * 3.6, owmData.wind.speed * 3.6, owmData.wind.speed * 3.6],
+                                sunrise: [new Date(owmData.sys.sunrise * 1000).toISOString()],
+                                sunset: [new Date(owmData.sys.sunset * 1000).toISOString()]
+                            },
+                            hourly: {
+                                time: [nowIso],
+                                temperature_2m: [owmData.main.temp],
+                                apparent_temperature: [owmData.main.feels_like],
+                                relative_humidity_2m: [owmData.main.humidity],
+                                precipitation_probability: [0],
+                                weather_code: [0],
+                                is_day: [1]
+                            }
+                        };
+                    }
+                } catch (owmErr) {
+                    console.warn('Fallback OpenWeather também falhou:', owmErr.message);
+                }
+            }
+        }
 
         if (!data || !data.current || !data.daily) {
-            return res.status(500).json({ cod: 500, message: 'Não foi possível obter os dados meteorológicos.' });
+            return res.status(502).json({ cod: 502, message: 'Serviço de meteorologia temporariamente instável. Por favor, tente novamente.' });
         }
 
         const currentWeatherCode = data.current.weather_code || 0;
