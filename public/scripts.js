@@ -13,17 +13,83 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+// Theme Management (Automatic OS Detection + Manual Toggle with Persistence)
+function obterTemaAtual() {
+    const dataTheme = document.documentElement.getAttribute('data-theme');
+    if (dataTheme) return dataTheme;
+    const prefereEscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return prefereEscuro ? 'dark' : 'light';
+}
+
+function aplicarTema(tema) {
+    document.documentElement.setAttribute('data-theme', tema);
+    const themeBtn = document.getElementById('themeToggleBtn');
+    if (themeBtn) {
+        const titleText = tema === 'dark' ? 'Alternar para Modo Claro' : 'Alternar para Modo Escuro';
+        themeBtn.setAttribute('title', titleText);
+        themeBtn.setAttribute('aria-label', titleText);
+    }
+}
+
+function alternarTema() {
+    const temaAtual = obterTemaAtual();
+    const novoTema = temaAtual === 'dark' ? 'light' : 'dark';
+    try {
+        localStorage.setItem('weather_theme_pref', novoTema);
+    } catch(e) {}
+    aplicarTema(novoTema);
+}
+
+function inicializarTema() {
+    let temaAtivo = 'dark';
+    try {
+        const salvo = localStorage.getItem('weather_theme_pref');
+        if (salvo === 'dark' || salvo === 'light') {
+            temaAtivo = salvo;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            temaAtivo = 'light';
+        }
+    } catch(e) {}
+
+    aplicarTema(temaAtivo);
+
+    // Watch OS theme change if user has not explicitly set a preference
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            const salvo = localStorage.getItem('weather_theme_pref');
+            if (!salvo) {
+                aplicarTema(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
+}
+
 // Show/Hide UI States
 function showState(stateName) {
-    const welcomeCard = document.getElementById('welcomeCard');
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
     const weatherDashboard = document.getElementById('weatherDashboard');
+    const appContainer = document.getElementById('appContainer');
 
-    if (welcomeCard) welcomeCard.style.display = (stateName === 'welcome') ? 'block' : 'none';
     if (loadingState) loadingState.style.display = (stateName === 'loading') ? 'block' : 'none';
     if (errorState) errorState.style.display = (stateName === 'error') ? 'block' : 'none';
     if (weatherDashboard) weatherDashboard.style.display = (stateName === 'dashboard') ? 'flex' : 'none';
+
+    const isShowingData = (stateName === 'dashboard' || stateName === 'loading' || stateName === 'error');
+    if (appContainer) {
+        if (isShowingData) {
+            appContainer.classList.add('has-results');
+        } else {
+            appContainer.classList.remove('has-results');
+        }
+    }
+    if (document.body) {
+        if (isShowingData) {
+            document.body.classList.add('has-results');
+        } else {
+            document.body.classList.remove('has-results');
+        }
+    }
 }
 
 // Main Search Trigger
@@ -315,16 +381,19 @@ function renderizar5Dias(fiveDaysList) {
 
     fiveDaysGrid.innerHTML = fiveDaysList.map(day => `
         <div class="day-card">
-            <div>
+            <div class="day-date-group">
                 <h4 class="day-name">${escapeHtml(day.dayOfWeek)}</h4>
                 <p class="day-date">${escapeHtml(day.dateFormatted)}</p>
             </div>
             
-            <img class="day-icon" src="https://openweathermap.org/img/wn/${day.icon}@2x.png" alt="${escapeHtml(day.description)}">
+            <div class="day-icon-wrap">
+                <img class="day-icon" src="https://openweathermap.org/img/wn/${day.icon}@2x.png" alt="${escapeHtml(day.description)}" loading="lazy">
+            </div>
             
-            <span class="day-desc">${escapeHtml(day.description)}</span>
-
-            <span class="day-rain-badge" title="Chance de chuva">💧 ${day.rain_chance}%</span>
+            <div class="day-condition-group">
+                <span class="day-desc">${escapeHtml(day.description)}</span>
+                <span class="day-rain-badge" title="Chance de chuva">💧 ${day.rain_chance}%</span>
+            </div>
 
             <div class="day-temp-bar">
                 <span class="day-min" title="Mínima">▼ ${day.temp_min}°C</span>
@@ -418,8 +487,12 @@ function recarregarSugestaoIa() {
 
 // Event Listeners on Page Load
 document.addEventListener('DOMContentLoaded', () => {
+    inicializarTema();
     const inputCidade = document.getElementById('inputCidade');
     if (inputCidade) {
+        inputCidade.value = '';
         inputCidade.addEventListener('input', atualizarBotaoLimpar);
+        atualizarBotaoLimpar();
     }
+    showState('welcome');
 });
