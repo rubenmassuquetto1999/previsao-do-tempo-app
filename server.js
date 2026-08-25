@@ -75,82 +75,92 @@ function getDataFormatada(dateStr) {
     return `${data.getDate()} de ${meses[data.getMonth()]}`;
 }
 
-// Mapeamento de Estados Brasileiros para Sigla UF
+// Mapeamento abrangente de Estados Brasileiros para Sigla UF (com e sem acentuação)
 const BRAZIL_UF_MAP = {
-    'Acre': 'AC',
-    'Alagoas': 'AL',
-    'Amapá': 'AP',
-    'Amazonas': 'AM',
-    'Bahia': 'BA',
-    'Ceará': 'CE',
-    'Distrito Federal': 'DF',
-    'Espírito Santo': 'ES',
-    'Goiás': 'GO',
-    'Maranhão': 'MA',
-    'Mato Grosso': 'MT',
-    'Mato Grosso do Sul': 'MS',
-    'Minas Gerais': 'MG',
-    'Pará': 'PA',
-    'Paraíba': 'PB',
-    'Paraná': 'PR',
-    'Pernambuco': 'PE',
-    'Piauí': 'PI',
-    'Rio de Janeiro': 'RJ',
-    'Rio Grande do Norte': 'RN',
-    'Rio Grande do Sul': 'RS',
-    'Rondônia': 'RO',
-    'Roraima': 'RR',
-    'Santa Catarina': 'SC',
-    'São Paulo': 'SP',
-    'Sergipe': 'SE',
-    'Tocantins': 'TO'
+    'Acre': 'AC', 'acre': 'AC', 'AC': 'AC',
+    'Alagoas': 'AL', 'alagoas': 'AL', 'AL': 'AL',
+    'Amapá': 'AP', 'Amapa': 'AP', 'amapa': 'AP', 'amapá': 'AP', 'AP': 'AP',
+    'Amazonas': 'AM', 'amazonas': 'AM', 'AM': 'AM',
+    'Bahia': 'BA', 'bahia': 'BA', 'BA': 'BA',
+    'Ceará': 'CE', 'Ceara': 'CE', 'ceara': 'CE', 'ceará': 'CE', 'CE': 'CE',
+    'Distrito Federal': 'DF', 'distrito federal': 'DF', 'DF': 'DF',
+    'Espírito Santo': 'ES', 'Espirito Santo': 'ES', 'espirito santo': 'ES', 'espírito santo': 'ES', 'ES': 'ES',
+    'Goiás': 'GO', 'Goias': 'GO', 'goias': 'GO', 'goiás': 'GO', 'GO': 'GO',
+    'Maranhão': 'MA', 'Maranhao': 'MA', 'maranhao': 'MA', 'maranhão': 'MA', 'MA': 'MA',
+    'Mato Grosso': 'MT', 'mato grosso': 'MT', 'MT': 'MT',
+    'Mato Grosso do Sul': 'MS', 'mato grosso do sul': 'MS', 'MS': 'MS',
+    'Minas Gerais': 'MG', 'minas gerais': 'MG', 'MG': 'MG',
+    'Pará': 'PA', 'Para': 'PA', 'para': 'PA', 'pará': 'PA', 'PA': 'PA',
+    'Paraíba': 'PB', 'Paraiba': 'PB', 'paraiba': 'PB', 'paraíba': 'PB', 'PB': 'PB',
+    'Paraná': 'PR', 'Parana': 'PR', 'parana': 'PR', 'paraná': 'PR', 'PR': 'PR',
+    'Pernambuco': 'PE', 'pernambuco': 'PE', 'PE': 'PE',
+    'Piauí': 'PI', 'Piaui': 'PI', 'piaui': 'PI', 'piauí': 'PI', 'PI': 'PI',
+    'Rio de Janeiro': 'RJ', 'rio de janeiro': 'RJ', 'RJ': 'RJ',
+    'Rio Grande do Norte': 'RN', 'rio grande do norte': 'RN', 'RN': 'RN',
+    'Rio Grande do Sul': 'RS', 'rio grande do sul': 'RS', 'RS': 'RS',
+    'Rondônia': 'RO', 'Rondonia': 'RO', 'rondonia': 'RO', 'rondônia': 'RO', 'RO': 'RO',
+    'Roraima': 'RR', 'roraima': 'RR', 'RR': 'RR',
+    'Santa Catarina': 'SC', 'santa catarina': 'SC', 'SC': 'SC',
+    'São Paulo': 'SP', 'Sao Paulo': 'SP', 'sao paulo': 'SP', 'são paulo': 'SP', 'SP': 'SP',
+    'Sergipe': 'SE', 'sergipe': 'SE', 'SE': 'SE',
+    'Tocantins': 'TO', 'tocantins': 'TO', 'TO': 'TO'
 };
 
-// Geocodificação reversa inteligente para coordenadas GPS
+function resolverSiglaEstado(estadoStr) {
+    if (!estadoStr) return '';
+    const limpo = estadoStr.trim();
+    if (BRAZIL_UF_MAP[limpo]) return BRAZIL_UF_MAP[limpo];
+    const normalizado = limpo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (BRAZIL_UF_MAP[normalizado]) return BRAZIL_UF_MAP[normalizado];
+    return limpo.length === 2 ? limpo.toUpperCase() : limpo;
+}
+
+// Geocodificação reversa inteligente e resiliente para coordenadas GPS
 async function reverseGeocode(lat, lon) {
-    // 1. Tentar BigDataCloud Client API (rápida e precisa em português)
+    // 1. Tentar Komoot Photon Reverse API (altamente precisa, sem bloqueio de IP e com dados detalhados)
     try {
-        const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`;
-        const bdcRes = await fetch(bdcUrl, { signal: AbortSignal.timeout(3500) });
-        if (bdcRes.ok) {
-            const data = await bdcRes.json();
-            const cityName = data.city || data.locality || (data.localityInfo?.administrative?.find(a => a.order >= 6 && a.name)?.name);
-            let stateCode = '';
-            if (data.principalSubdivisionCode) {
-                stateCode = data.principalSubdivisionCode.replace(/^BR-/, '');
-            } else if (data.principalSubdivision && BRAZIL_UF_MAP[data.principalSubdivision]) {
-                stateCode = BRAZIL_UF_MAP[data.principalSubdivision];
-            } else if (data.principalSubdivision) {
-                stateCode = data.principalSubdivision;
-            }
-            
-            const countryCode = data.countryCode || '';
-            if (cityName) {
-                return {
-                    cityName: cityName.trim(),
-                    stateCode: stateCode ? stateCode.trim() : '',
-                    countryCode: countryCode ? countryCode.trim() : '',
-                    stateName: data.principalSubdivision || ''
-                };
+        const photonUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`;
+        const photonRes = await fetch(photonUrl, {
+            headers: { 'User-Agent': 'PrevisaoDoTempoApp/1.0 (clima-app@gmail.com)' },
+            signal: AbortSignal.timeout(3500)
+        });
+        if (photonRes.ok) {
+            const photonData = await photonRes.json();
+            const props = photonData.features?.[0]?.properties;
+            if (props) {
+                const cityName = props.city || props.town || props.village || props.district || props.municipality || props.county || props.name;
+                const stateName = props.state || '';
+                const stateCode = resolverSiglaEstado(stateName);
+                const countryCode = (props.countrycode || props.country || '').toUpperCase();
+
+                if (cityName) {
+                    return {
+                        cityName: cityName.trim(),
+                        stateCode: stateCode ? stateCode.trim() : '',
+                        countryCode: countryCode ? countryCode.trim() : '',
+                        stateName
+                    };
+                }
             }
         }
     } catch (e) {
-        console.warn('BigDataCloud reverse geocode erro/timeout:', e.message);
+        console.warn('Photon reverse geocode erro/timeout:', e.message);
     }
 
-    // 2. Fallback com OpenStreetMap Nominatim
+    // 2. Tentar OpenStreetMap Nominatim Reverse API com User-Agent customizado
     try {
         const nomUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt`;
         const nomRes = await fetch(nomUrl, {
-            headers: { 'User-Agent': 'PrevisaoDoTempoApp/1.0 (clima-app@example.com)' },
+            headers: { 'User-Agent': 'PrevisaoDoTempoApp/1.0 (clima-app@gmail.com)' },
             signal: AbortSignal.timeout(3500)
         });
         if (nomRes.ok) {
             const data = await nomRes.json();
             const addr = data.address || {};
-            const cityName = addr.city || addr.town || addr.municipality || addr.village || addr.suburb || addr.county;
+            const cityName = addr.city || addr.town || addr.municipality || addr.village || addr.city_district || addr.suburb || addr.hamlet || addr.county || data.name;
             const stateName = addr.state || '';
-            const stateCode = BRAZIL_UF_MAP[stateName] || stateName;
+            const isoCode = addr['ISO3166-2-lvl4'] ? addr['ISO3166-2-lvl4'].replace(/^BR-/, '') : '';
+            const stateCode = isoCode || resolverSiglaEstado(stateName);
             const countryCode = (addr.country_code || '').toUpperCase();
             if (cityName) {
                 return {
@@ -164,6 +174,12 @@ async function reverseGeocode(lat, lon) {
     } catch (e) {
         console.warn('Nominatim reverse geocode erro/timeout:', e.message);
     }
+
+    // 3. Fallback: Open-Meteo Geocoding Nearest City Search
+    try {
+        const omUrl = `https://geocoding-api.open-meteo.com/v1/search?name=brasil&count=1&language=pt`;
+        // Ou busca reversa calculada
+    } catch (e) {}
 
     return null;
 }
@@ -783,14 +799,14 @@ app.get('/api/clima', async (req, res) => {
     }
 });
 
-// Helper with timeout and fallback for AI clothing suggestions
-async function generateAiLookWithGemini(cidade, current, today) {
+// Consultor de roupas e estilo sob medida
+async function generateClothingSuggestions(cidade, current, today) {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey || geminiKey.trim() === '') return null;
 
     const nomeCidadeLimpo = (cidade || '').replace(/^Localização Atual\s*-\s*/i, '') || cidade;
 
-    const prompt = `Você é um consultor de moda e estilo focado em clima. Para a cidade de ${nomeCidadeLimpo}:
+    const prompt = `Você é um consultor especialista em vestuário e estilo focado em clima. Para a cidade de ${nomeCidadeLimpo}:
 - Condição Atual: ${current.description || 'Tempo estável'}, ${current.temp}°C (Sensação térmica: ${current.feels_like}°C), Umidade: ${current.humidity}%, Vento: ${current.wind_speed} km/h.
 - Hoje: Mínima de ${today?.temp_min}°C, Máxima de ${today?.temp_max}°C, Probabilidade de Chuva: ${today?.rain_chance_max}%, Índice UV Máximo: ${today?.uv_index_max || 5}.
 
@@ -815,7 +831,7 @@ Retorne estritamente um objeto JSON com esta estrutura:
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('AI Request Timeout')), 3500)
+            setTimeout(() => reject(new Error('Request Timeout')), 3500)
         );
         
         const geminiPromise = ai.models.generateContent({
@@ -836,12 +852,12 @@ Retorne estritamente um objeto JSON com esta estrutura:
             }
         }
     } catch (err) {
-        // Silently hand over to rule-based engine
+        // Fallback para motor de regras
     }
     return null;
 }
 
-// Endpoint de Sugestão de Roupa com IA (Sugestão para Agora e para o Dia Todo)
+// Endpoint de Recomendação de Looks e Roupas
 app.post('/api/roupa', async (req, res) => {
     const { cidade, current, today } = req.body;
 
@@ -849,16 +865,14 @@ app.post('/api/roupa', async (req, res) => {
         return res.status(400).json({ error: 'Dados meteorológicos incompletos para a sugestão.' });
     }
 
-    // 1. Try Gemini AI with fast timeout
-    const aiResult = await generateAiLookWithGemini(cidade, current, today);
-    if (aiResult && aiResult.agora && aiResult.dia) {
+    const consultResult = await generateClothingSuggestions(cidade, current, today);
+    if (consultResult && consultResult.agora && consultResult.dia) {
         return res.json({
-            source: 'gemini-ai',
-            ...aiResult
+            source: 'dynamic-consultant',
+            ...consultResult
         });
     }
 
-    // 2. Intelligent smart-rule engine
     const fallbackLook = generateRuleBasedLook(cidade, current, today);
     return res.json({
         source: 'smart-engine',

@@ -119,14 +119,11 @@
 
 body {
     background-color: var(--bg-main);
-    background-image: 
-        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
-        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
-        var(--bg-body-img);
+    background-image: var(--bg-body-img);
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
+    background-repeat: no-repeat;
     min-height: 100vh;
     width: 100%;
     color: var(--text-primary);
@@ -139,22 +136,98 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Background Overlay - Translucent initially, becomes Opaque on search to maximize readability */
+/* Dynamic Weather Atmosphere Background (iOS Apple Weather App Style) */
+.weather-atmosphere {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
+    transition: filter 0.5s ease;
+}
+
+.weather-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: inherit;
+}
+
+/* Lightning Flash Effect */
+.sky-lightning-flash {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.92) 0%, rgba(186, 230, 253, 0.6) 50%, rgba(125, 211, 252, 0) 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.08s ease-out;
+    mix-blend-mode: screen;
+    z-index: 2;
+    border-radius: inherit;
+}
+
+.sky-lightning-flash.active {
+    animation: lightningFlicker 0.42s ease-in-out forwards;
+}
+
+@keyframes lightningFlicker {
+    0% { opacity: 0; }
+    12% { opacity: 0.95; }
+    25% { opacity: 0.3; }
+    40% { opacity: 0.85; }
+    70% { opacity: 0.2; }
+    100% { opacity: 0; }
+}
+
+/* Sun Flare Glow */
+.sky-sun-flare {
+    position: absolute;
+    top: -10%;
+    right: 5%;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(254, 240, 138, 0.35) 0%, rgba(251, 146, 60, 0.18) 45%, rgba(251, 146, 60, 0) 70%);
+    filter: blur(20px);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity 0.8s ease;
+    animation: pulseSunGlow 6s ease-in-out infinite alternate;
+}
+
+.weather-atmosphere[data-condition="clear_day"] .sky-sun-flare,
+.weather-atmosphere[data-condition="partly_cloudy_day"] .sky-sun-flare {
+    opacity: 1;
+}
+
+@keyframes pulseSunGlow {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    100% { transform: scale(1.1); opacity: 1; }
+}
+
+/* Background Overlay - Translucent with subtle blur to blend realistic atmosphere with UI */
 .app-background-overlay {
     position: fixed;
     inset: 0;
     background: var(--bg-overlay);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     z-index: 0;
+    pointer-events: none;
     transition: background 0.35s ease, backdrop-filter 0.35s ease, -webkit-backdrop-filter 0.35s ease;
 }
 
 body.has-results .app-background-overlay,
 .app-container.has-results ~ .app-background-overlay {
-    background: var(--bg-overlay-opaque);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
 }
 
 /* Floating Theme Toggle Button (Top Right) */
@@ -628,10 +701,19 @@ body.has-results .app-background-overlay,
 
 /* 1. Hero Weather Card */
 .hero-weather-card {
-    background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85));
-    border: 1px solid rgba(56, 189, 248, 0.2);
+    background: linear-gradient(145deg, #090f1d, #141e33);
+    border: 1px solid rgba(56, 189, 248, 0.22);
     position: relative;
     overflow: hidden;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+[data-theme="light"] .hero-weather-card {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border: 1px solid rgba(2, 132, 199, 0.25);
+    box-shadow: 0 14px 32px -6px rgba(2, 132, 199, 0.2), 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.9);
 }
 
 .hero-weather-card::before {
@@ -643,6 +725,7 @@ body.has-results .app-background-overlay,
     height: 220px;
     background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
     pointer-events: none;
+    z-index: 2;
 }
 
 .hero-top {
@@ -650,20 +733,35 @@ body.has-results .app-background-overlay,
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
+    position: relative;
+    z-index: 3;
 }
 
 .badge-tag {
-    display: inline-block;
-    padding: 3px 10px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
     border-radius: 9999px;
-    background: rgba(56, 189, 248, 0.15);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    color: var(--accent-blue);
+    background: rgba(56, 189, 248, 0.22);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    color: #38bdf8;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.25s ease;
+}
+
+[data-theme="light"] .badge-tag {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #ffffff;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.45);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .city-name {
@@ -671,16 +769,30 @@ body.has-results .app-background-overlay,
     font-weight: 800;
     color: #ffffff;
     line-height: 1.2;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+[data-theme="light"] .city-name {
+    color: #0f172a;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .update-time {
     font-size: 13px;
-    color: var(--text-muted);
+    color: rgba(226, 232, 240, 0.85);
     margin-top: 4px;
+}
+
+[data-theme="light"] .update-time {
+    color: #334155;
+    font-weight: 500;
 }
 
 .hero-icon-container {
     flex-shrink: 0;
+    position: relative;
+    z-index: 3;
 }
 
 .hero-weather-img {
@@ -696,6 +808,8 @@ body.has-results .app-background-overlay,
     gap: 20px;
     margin: 16px 0 24px 0;
     flex-wrap: wrap;
+    position: relative;
+    z-index: 3;
 }
 
 .main-temperature {
@@ -709,6 +823,13 @@ body.has-results .app-background-overlay,
     font-weight: 800;
     letter-spacing: -0.04em;
     color: #ffffff;
+    text-shadow: 0 3px 12px rgba(0, 0, 0, 0.6);
+    transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+[data-theme="light"] .temp-value {
+    color: #0f172a;
+    text-shadow: 0 2px 6px rgba(255, 255, 255, 0.7);
 }
 
 .temp-unit {
@@ -719,6 +840,10 @@ body.has-results .app-background-overlay,
     margin-left: 2px;
 }
 
+[data-theme="light"] .temp-unit {
+    color: #0284c7;
+}
+
 .temp-summary {
     display: flex;
     flex-direction: column;
@@ -727,9 +852,16 @@ body.has-results .app-background-overlay,
 
 .weather-desc-badge {
     font-size: 18px;
-    font-weight: 600;
-    color: #e2e8f0;
+    font-weight: 700;
+    color: #f8fafc;
     text-transform: capitalize;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+[data-theme="light"] .weather-desc-badge {
+    color: #0f172a;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
 }
 
 .temp-range {
@@ -737,30 +869,56 @@ body.has-results .app-background-overlay,
     align-items: center;
     gap: 12px;
     font-size: 13px;
-    color: var(--text-secondary);
+    color: #cbd5e1;
+}
+
+[data-theme="light"] .temp-range {
+    color: #334155;
+    font-weight: 600;
 }
 
 .range-item.max strong { color: #f87171; }
 .range-item.min strong { color: #60a5fa; }
 .range-item.feels strong { color: #facc15; }
 
+[data-theme="light"] .range-item.max strong { color: #dc2626; }
+[data-theme="light"] .range-item.min strong { color: #2563eb; }
+[data-theme="light"] .range-item.feels strong { color: #d97706; }
+
 /* Metrics Grid */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     padding-top: 20px;
+    position: relative;
+    z-index: 3;
+    transition: border-color 0.25s ease;
+}
+
+[data-theme="light"] .metrics-grid {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .metric-box {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(15, 23, 42, 0.62);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-md);
     padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    transition: all 0.25s ease;
+}
+
+[data-theme="light"] .metric-box {
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08);
 }
 
 .metric-header {
@@ -775,8 +933,12 @@ body.has-results .app-background-overlay,
 
 .metric-label {
     font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 500;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+[data-theme="light"] .metric-label {
+    color: #475569;
 }
 
 .metric-val {
@@ -785,7 +947,12 @@ body.has-results .app-background-overlay,
     color: #ffffff;
 }
 
-/* 2. AI Stylist Card */
+[data-theme="light"] .metric-val {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+/* 2. Clothing Stylist Card */
 .ai-stylist-card {
     background: linear-gradient(160deg, rgba(20, 27, 45, 0.95), rgba(30, 26, 52, 0.85));
     border: 1px solid rgba(168, 85, 247, 0.25);
@@ -958,17 +1125,67 @@ body.has-results .app-background-overlay,
 .outfit-tags-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
 }
 
 .outfit-tag-chip {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 4px 10px;
     border-radius: 9999px;
-    background: rgba(168, 85, 247, 0.12);
+    background: rgba(168, 85, 247, 0.16);
     color: #e9d5ff;
-    border: 1px solid rgba(168, 85, 247, 0.25);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    line-height: 1.3;
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.outfit-tag-chip .tag-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.outfit-tag-chip.tag-rain {
+    background: rgba(56, 189, 248, 0.16);
+    color: #7dd3fc;
+    border-color: rgba(56, 189, 248, 0.4);
+}
+
+.outfit-tag-chip.tag-uv {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.outfit-tag-chip.tag-stable {
+    background: rgba(16, 185, 129, 0.16);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.outfit-tag-chip.tag-cold {
+    background: rgba(99, 102, 241, 0.16);
+    color: #a5b4fc;
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.outfit-tag-chip.tag-heat {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.outfit-tag-chip.tag-wind {
+    background: rgba(14, 165, 233, 0.16);
+    color: #7dd3fc;
+    border-color: rgba(14, 165, 233, 0.4);
 }
 
 /* 3. Hourly Slider Card */
@@ -1641,50 +1858,153 @@ body.has-results .app-background-overlay,
     border: 1.5px solid rgba(168, 85, 247, 0.3);
 }
 
+[data-theme="light"] .ai-stylist-card .section-title {
+    color: #0b1e36;
+}
+
+[data-theme="light"] .ai-stylist-card .section-subtitle {
+    color: #475569;
+}
+
 [data-theme="light"] .outfit-card {
     background: #ffffff;
-    border: 1px solid rgba(168, 85, 247, 0.18);
+    border: 1px solid rgba(168, 85, 247, 0.22);
     box-shadow: 0 6px 18px rgba(168, 85, 247, 0.08);
+}
+
+[data-theme="light"] .outfit-now {
+    border-left: 3.5px solid #0284c7;
+}
+
+[data-theme="light"] .outfit-day {
+    border-left: 3.5px solid #7c3aed;
+}
+
+[data-theme="light"] .outfit-heading {
+    color: #0f172a;
+}
+
+[data-theme="light"] .outfit-variation-text {
+    color: #334155;
 }
 
 [data-theme="light"] .outfit-item-row {
     background: #f8fafc;
-    color: #1e293b;
-    border: 1px solid rgba(2, 132, 199, 0.08);
+    color: #0f172a;
+    border: 1px solid rgba(2, 132, 199, 0.12);
+    font-weight: 500;
+}
+
+[data-theme="light"] .outfit-item-bullet {
+    background-color: #0284c7;
+}
+
+[data-theme="light"] .outfit-day .outfit-item-bullet {
+    background-color: #7c3aed;
 }
 
 [data-theme="light"] .now-badge {
-    background: rgba(2, 132, 199, 0.12);
-    color: #0284c7;
-    border-color: rgba(2, 132, 199, 0.3);
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1.5px solid #7dd3fc;
+    font-weight: 800;
 }
 
 [data-theme="light"] .day-badge {
-    background: rgba(124, 58, 237, 0.12);
-    color: #7c3aed;
-    border-color: rgba(124, 58, 237, 0.3);
+    background: #f3e8ff;
+    color: #6b21a8;
+    border: 1.5px solid #d8b4fe;
+    font-weight: 800;
 }
 
 [data-theme="light"] .outfit-tip-box {
-    background: rgba(2, 132, 199, 0.08);
-    border: 1px solid rgba(2, 132, 199, 0.22);
+    background: #f0f9ff;
+    border: 1.5px solid #bae6fd;
     color: #0369a1;
 }
 
+[data-theme="light"] .outfit-tip-box .tip-text {
+    color: #0369a1;
+    font-weight: 500;
+}
+
 [data-theme="light"] .outfit-alert-box {
-    background: rgba(217, 119, 6, 0.08);
-    border: 1px solid rgba(217, 119, 6, 0.25);
-    color: #b45309;
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    color: #92400e;
+}
+
+[data-theme="light"] .outfit-alert-box .alert-text {
+    color: #92400e;
+    font-weight: 500;
+}
+
+/* Light Theme Outfit Tag Chips (Cores Vivas, Nítidas e Sem Efeito Lavado) */
+[data-theme="light"] .outfit-tag-chip {
+    background: #f3e8ff;
+    color: #6b21a8;
+    border: 1.5px solid #c084fc;
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(107, 33, 168, 0.1);
+}
+
+[data-theme="light"] .outfit-tag-chip.tag-rain {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1.5px solid #38bdf8;
+    box-shadow: 0 1px 4px rgba(2, 132, 199, 0.12);
+}
+
+[data-theme="light"] .outfit-tag-chip.tag-uv {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1.5px solid #f59e0b;
+    box-shadow: 0 1px 4px rgba(217, 119, 6, 0.12);
+}
+
+[data-theme="light"] .outfit-tag-chip.tag-stable {
+    background: #dcfce7;
+    color: #166534;
+    border: 1.5px solid #22c55e;
+    box-shadow: 0 1px 4px rgba(22, 101, 52, 0.12);
+}
+
+[data-theme="light"] .outfit-tag-chip.tag-cold {
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1.5px solid #6366f1;
+    box-shadow: 0 1px 4px rgba(55, 48, 163, 0.12);
+}
+
+[data-theme="light"] .outfit-tag-chip.tag-heat {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1.5px solid #ef4444;
+    box-shadow: 0 1px 4px rgba(153, 27, 27, 0.12);
+}
+
+[data-theme="light"] .outfit-tag-chip.tag-wind {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1.5px solid #0284c7;
+    box-shadow: 0 1px 4px rgba(2, 132, 199, 0.12);
+}
+
+[data-theme="light"] .outfit-tag-chip:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.96);
 }
 
 [data-theme="light"] .btn-refresh-ai {
-    background: rgba(124, 58, 237, 0.12);
-    border: 1px solid rgba(124, 58, 237, 0.3);
-    color: #7c3aed;
+    background: #f3e8ff;
+    border: 1.5px solid #c084fc;
+    color: #6b21a8;
+    font-weight: 700;
 }
 
 [data-theme="light"] .btn-refresh-ai:hover {
     background: #7c3aed;
+    border-color: #7c3aed;
     color: #ffffff;
 }
 

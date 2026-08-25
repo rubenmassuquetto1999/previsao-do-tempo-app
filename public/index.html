@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Previsão do Tempo</title>
+    <title>Clima &amp; Look | Previsão do Tempo em Tempo Real</title>
     <script>
         // Ensure window.fetch is writable and configurable to prevent "Cannot set property fetch of #<Window> which has only a getter"
         (function() {
@@ -32,7 +32,9 @@
             } catch(e) {}
         })();
     </script>
+    <link rel="icon" href="./img/tempo.png" type="image/png">
     <link rel="shortcut icon" href="./img/tempo.png" type="image/png">
+    <link rel="apple-touch-icon" href="./img/tempo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -156,6 +158,14 @@
                 
                 <!-- 1. Hero Weather Card (Current + Today) -->
                 <section class="card hero-weather-card" id="heroWeatherCard">
+                    <!-- Dynamic Weather Atmosphere Animation Engine -->
+                    <div class="weather-atmosphere" id="weatherAtmosphere">
+                        <canvas id="weatherCanvas" class="weather-canvas"></canvas>
+                        <div class="sky-sun-flare" id="skySunFlare"></div>
+                        <div class="sky-lightning-flash" id="skyLightningFlash"></div>
+                        <div class="sky-mist-overlay" id="skyMistOverlay"></div>
+                    </div>
+
                     <div class="hero-top">
                         <div class="location-details">
                             <span class="badge-tag">Tempo Agora</span>
@@ -215,22 +225,22 @@
                     </div>
                 </section>
 
-                <!-- 2. AI Clothing Stylist Section -->
+                <!-- 2. Clothing Recommendations Section -->
                 <section class="card ai-stylist-card" id="aiStylistCard">
                     <div class="card-header-row">
                         <div class="card-title-group">
                             <span class="ai-sparkle-icon">✨</span>
                             <div>
                                 <h3 class="section-title">Recomendação de Roupa</h3>
-                                <p class="section-subtitle">Recomendações sob medida geradas para o clima atual e planejamento do dia</p>
+                                <p class="section-subtitle">Dicas de vestuário ideais para o clima atual e variações do dia</p>
                             </div>
                         </div>
-                        <button type="button" class="btn-refresh-ai" id="btnRefreshAi" onclick="recarregarSugestaoIa()" title="Gerar novas dicas com IA">
+                        <button type="button" class="btn-refresh-ai" id="btnRefreshAi" onclick="recarregarSugestaoRoupas()" title="Atualizar recomendações de look">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="23 4 23 10 17 10"></polyline>
                                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                             </svg>
-                            <span>Regerar Dicas</span>
+                            <span>Atualizar Dicas</span>
                         </button>
                     </div>
 
@@ -312,10 +322,11 @@
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>Previsão meteorológica fornecida por Open-Meteo & OpenWeather | IA powered by Google Gemini</p>
+            <p>Previsão meteorológica em tempo real &bull; Dados meteorológicos de alta precisão</p>
         </footer>
     </div>
 
+    <script src="atmosphere.js"></script>
     <script src="scripts.js"></script>
 </body>
 

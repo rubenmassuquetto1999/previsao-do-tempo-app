@@ -73,7 +73,14 @@ function showState(stateName) {
 
     if (loadingState) loadingState.style.display = (stateName === 'loading') ? 'block' : 'none';
     if (errorState) errorState.style.display = (stateName === 'error') ? 'block' : 'none';
-    if (weatherDashboard) weatherDashboard.style.display = (stateName === 'dashboard') ? 'flex' : 'none';
+    if (weatherDashboard) {
+        weatherDashboard.style.display = (stateName === 'dashboard') ? 'flex' : 'none';
+        if (stateName === 'dashboard' && window.WeatherAtmosphere) {
+            requestAnimationFrame(() => {
+                window.WeatherAtmosphere.resize();
+            });
+        }
+    }
 
     const isShowingData = (stateName === 'dashboard' || stateName === 'loading' || stateName === 'error');
     if (appContainer) {
@@ -153,13 +160,15 @@ async function buscarPorLocalizacao() {
         async (pos) => {
             const { latitude, longitude } = pos.coords;
             try {
-                // Try reverse geocoding with Open-Meteo or fetch weather directly
+                // Direct reverse-geocoding & weather retrieval with coordinates
                 const res = await fetch(`/api/clima?lat=${latitude}&lon=${longitude}`);
                 const data = await res.json();
                 if (data.cod === 200) {
                     renderizarDashboard(data);
                     const inputCidade = document.getElementById('inputCidade');
-                    if (inputCidade) inputCidade.value = data.location.name;
+                    if (inputCidade) {
+                        inputCidade.value = data.location.fullName || data.location.name;
+                    }
                     atualizarBotaoLimpar();
                 } else {
                     mostrarErro(data.message || "Não foi possível carregar o clima de sua localização.");
@@ -173,7 +182,7 @@ async function buscarPorLocalizacao() {
             console.warn("Erro ao obter GPS:", error);
             mostrarErro("Não foi possível acessar a localização. Por favor, digite o nome da cidade.");
         },
-        { timeout: 10000 }
+        { timeout: 10000, enableHighAccuracy: true }
     );
 }
 
@@ -345,8 +354,17 @@ async function renderizarDashboard(dados) {
     // 3. Render 5-Day Forecast Grid
     renderizar5Dias(dados.forecast5Days);
 
-    // 4. Request and render AI Clothing Recommendations
-    await carregarSugestaoIa();
+    // 4. Update Dynamic iOS Atmospheric Weather Animations
+    if (window.WeatherAtmosphere) {
+        window.WeatherAtmosphere.setWeather(
+            dados.current.category || dados.current.weather_code,
+            dados.current.is_day,
+            dados.current.category
+        );
+    }
+
+    // 5. Request and render Clothing Recommendations
+    await carregarSugestaoRoupas();
 }
 
 // Hourly Slider Renderer
@@ -403,8 +421,8 @@ function renderizar5Dias(fiveDaysList) {
     `).join('');
 }
 
-// AI Clothing Request & Display
-async function carregarSugestaoIa() {
+// Clothing Request & Display
+async function carregarSugestaoRoupas() {
     if (!currentWeatherData) return;
 
     const outfitNowSummary = document.getElementById('outfitNowSummary');
@@ -418,7 +436,7 @@ async function carregarSugestaoIa() {
     const outfitDayTags = document.getElementById('outfitDayTags');
     const outfitDayAlert = document.getElementById('outfitDayAlert');
 
-    if (outfitNowSummary) outfitNowSummary.textContent = "A IA está analisando a temperatura atual...";
+    if (outfitNowSummary) outfitNowSummary.textContent = "Analisando a temperatura atual...";
     if (outfitNowItems) outfitNowItems.innerHTML = `<div class="outfit-item-row"><span class="outfit-item-bullet"></span><span>Calculando peças ideais...</span></div>`;
     if (outfitDaySummary) outfitDaySummary.textContent = "Analisando a variação térmica do dia...";
     if (outfitDayItems) outfitDayItems.innerHTML = `<div class="outfit-item-row"><span class="outfit-item-bullet"></span><span>Estruturando camadas para o dia...</span></div>`;
@@ -467,9 +485,32 @@ async function carregarSugestaoIa() {
             }
 
             if (outfitDayTags && Array.isArray(data.dia.tags)) {
-                outfitDayTags.innerHTML = data.dia.tags.map(tag => `
-                    <span class="outfit-tag-chip">${escapeHtml(tag)}</span>
-                `).join('');
+                outfitDayTags.innerHTML = data.dia.tags.map(tag => {
+                    let typeClass = 'tag-default';
+                    let icon = '✨';
+                    const lower = tag.toLowerCase();
+                    if (lower.includes('chuva') || lower.includes('guarda-chuva') || lower.includes('capa')) {
+                        typeClass = 'tag-rain';
+                        icon = '☂️';
+                    } else if (lower.includes('uv') || lower.includes('sol') || lower.includes('óculos') || lower.includes('protetor')) {
+                        typeClass = 'tag-uv';
+                        icon = '☀️';
+                    } else if (lower.includes('estável') || lower.includes('ameno') || lower.includes('confortável') || lower.includes('tempo bom')) {
+                        typeClass = 'tag-stable';
+                        icon = '🌤️';
+                    } else if (lower.includes('frio') || lower.includes('jaqueta') || lower.includes('casaco') || lower.includes('blusa') || lower.includes('vento frio')) {
+                        typeClass = 'tag-cold';
+                        icon = '❄️';
+                    } else if (lower.includes('calor') || lower.includes('quente') || lower.includes('abafado')) {
+                        typeClass = 'tag-heat';
+                        icon = '🔥';
+                    } else if (lower.includes('vento') || lower.includes('ventania')) {
+                        typeClass = 'tag-wind';
+                        icon = '💨';
+                    }
+
+                    return `<span class="outfit-tag-chip ${typeClass}"><span class="tag-icon">${icon}</span><span>${escapeHtml(tag)}</span></span>`;
+                }).join('');
             }
         }
 
@@ -479,9 +520,9 @@ async function carregarSugestaoIa() {
     }
 }
 
-function recarregarSugestaoIa() {
+function recarregarSugestaoRoupas() {
     if (currentWeatherData) {
-        carregarSugestaoIa();
+        carregarSugestaoRoupas();
     }
 }
 

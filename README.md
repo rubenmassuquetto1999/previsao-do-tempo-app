@@ -1,53 +1,68 @@
-# 🌤️ Clima & Look IA | Previsão do Tempo Inteligente
+# 🌤️ Clima & Look | Previsão do Tempo & Consultor de Vestuário
 
-Uma aplicação Full-Stack desenvolvida para consultar o clima em tempo real e gerar sugestões personalizadas de roupas utilizando Inteligência Artificial, adaptando-se perfeitamente às condições climáticas da cidade pesquisada.
-
-## 🌐 Demonstração Online
-O projeto está no ar e pronto para uso! 
-🔗 **Acesse aqui:** [https://previsao-do-tempo-app.ai.studio](https://previsao-do-tempo-app.ai.studio)
+Uma aplicação Full-Stack desenvolvida para consultar o clima em tempo real com alta precisão meteorológica e recomendações dinâmicas de roupas e acessórios ideais para o dia, com animação atmosférica interativa a 60 FPS e suporte a temas Claro e Escuro.
 
 ---
 
 ## 🚀 Funcionalidades
-- **Previsão em Tempo Real:** Busca dados climáticos exatos (temperatura, umidade e ícones visuais) de qualquer cidade do mundo.
-- **Consultoria de Moda via IA:** Integração com o modelo Llama 3 (via Groq) para sugerir o look ideal em textos curtos e diretos, com base no clima daquele exato momento.
-- **Comandos de Voz:** Acessibilidade garantida com a integração da Web Speech API, permitindo que o usuário dite o nome da cidade através do microfone.
-- **Pesquisa Ágil:** Disparo de requisições tanto por clique nos botões quanto pela tecla "Enter".
-- **Design Responsivo:** Interface construída com Flexbox moderno, garantindo uma experiência visual impecável em smartphones (incluindo iOS/Safari), tablets e desktops.
-- **Segurança de Credenciais:** Arquitetura Back-end em Node.js que consome e protege as chaves das APIs de terceiros.
+
+- **Previsão em Tempo Real:** Dados meteorológicos de alta precisão com sensação térmica, umidade, vento, pressão, probabilidade de chuva e índice UV.
+- **Animação Atmosférica Dinâmica (Estilo iOS Weather):** Motor gráfico a 60 FPS que simula no cartão do tempo condições reais (sol com raios volumétricos, noites estreladas com lua, nuvens em camadas flutuantes, chuva com respingos, tempestades com relâmpagos e neblina).
+- **Consultoria de Vestuário Sob Medida:** Recomendações estruturadas de look para o momento atual e para a variação térmica do dia todo, incluindo sugestões de calçados e acessórios de proteção (chuva, sol e vento).
+- **Previsão Horária e Estendida:** Carrossel horário para as próximas 24 horas e grade estendida para os próximos 5 dias.
+- **Geolocalização Automática (GPS):** Detecção rápida com formatação exata da cidade e estado (ex: `Localização Atual - Curitiba/PR`).
+- **Comandos de Voz:** Acessibilidade com suporte a ditado por voz via Web Speech API.
+- **Design Responsivo & Temas:** Alternância fluida entre **Modo Claro** (com cores vivas e alto contraste) e **Modo Escuro**, responsivo para mobile, tablets e desktops.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 ### Front-End
-- HTML5 Clássico e Semântico
-- CSS3 (Flexbox & Media Queries para responsividade total)
-- JavaScript (ES6+, Vanilla JS com uso de Async/Await)
+- HTML5 Semântico
+- CSS3 Moderno (Variáveis CSS, Backdrop Blur, Flexbox & CSS Grid)
+- JavaScript Vanilla (ES6+, Async/Await)
+- HTML5 Canvas & 2D Context (Engine de partículas atmosféricas)
 
 ### Back-End & Infraestrutura
-- Node.js
-- Express (Criação de rotas da API local)
-- Cors (Controle de acesso)
-- Dotenv (Gerenciamento de variáveis de ambiente)
-- Render (Deploy e Hospedagem em nuvem)
+- Node.js & Express
+- Cors & Dotenv
+- Proxy seguro de APIs meteorológicas com geocodificação reversa integrada
 
-### APIs de Terceiros
-- [OpenWeatherMap API](https://openweathermap.org/) (Geolocalização e Clima)
-- [Groq API](https://groq.com/) (LLM de Inteligência Artificial)
+### Serviços Meteorológicos
+- [Open-Meteo API](https://open-meteo.com/) (Previsão precisa sem limites rígidos e histórico detalhado)
+- [OpenWeatherMap API](https://openweathermap.org/) (Camada complementar e geolocalização)
 
 ---
 
 ## ⚙️ Como Rodar o Projeto Localmente
 
-Caso queira clonar o repositório e rodar a aplicação na sua própria máquina, siga os passos abaixo.
-
 ### Pré-requisitos
-- [Node.js](https://nodejs.org/) instalado.
-- Chaves de API ativas no OpenWeatherMap e no Groq.
+- [Node.js](https://nodejs.org/) (versão 18 ou superior recomendada)
 
 ### Instalação
 
 1. Clone este repositório:
    ```bash
-   git clone [https://github.com/SEU-USUARIO/previsao-do-tempo-app.git](https://github.com/SEU-USUARIO/previsao-do-tempo-app.git)
+   git clone https://github.com/SEU-USUARIO/previsao-do-tempo-app.git
+   ```
+
+2. Acesse a pasta do projeto:
+   ```bash
+   cd previsao-do-tempo-app
+   ```
+
+3. Instale as dependências:
+   ```bash
+   npm install
+   ```
+
+4. Inicie o servidor:
+   ```bash
+   npm start
+   ```
+
+5. Abra no navegador:
+   ```text
+   http://localhost:3000
+   ```
